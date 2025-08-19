@@ -2,7 +2,7 @@
 
 - Es ist noch im Aufbau aber funktioniert soweit.
 - Ein großes Update ist unterwegs, es wird aber noch ein Weilchen dauern.
-- - Es enthält einige Bugfixes, Codeoptimierung, schmeißt Redundantes raus und hat große Neuerungen, wobei die Grundfunktion des Skriptes sich kaum verändert.
+  - Es enthält einige Bugfixes, Codeoptimierung, schmeißt Redundantes raus und hat große Neuerungen, wobei die Grundfunktion des Skriptes sich kaum verändert.
 
 ## Vorstellung
 
