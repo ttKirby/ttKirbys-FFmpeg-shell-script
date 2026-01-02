@@ -1,37 +1,5 @@
 #!/bin/bash
 
-# GEPLANT
-#
-# diew ahl ob 5.1 auch wenns erkannt wird zu stereo kodiert wird
-# neuer name für auto audio/metadata/reihenfolge-sonstwas
-# farben neu überdenken.
-# ein paar Vorlagen bereitstellen
-# 	untertitel hinzufügen ohne transkodieren
-# 	die wahl einen untertitel im videofile zu wählen/mitzunehmen
-# metadata sprache automatisch erkennen und in richtige reihenfolge bringen
-# 	automatische zuordnung von tonspuren. man hat dann auch die wahl um tonspuir 1 und 2 zu tauschen (kann eignetlich in vorlagen, mal gucken)
-# resi verlinken https://github.com/resi23
-# per preset auf die audio und spracherkennung zugreifen können
-# auswählen, welche audiospuren man wählen möchte (z.B. 0 und 2 aber nicht 1)
-# untertitel entfernen kann eigentlich in presets, mal gucken
-
-# NEUERUNGEN UND FEHLERBEHEBUNG (alles richtig testen steht noch aus!)
-#
-# presets in unterordner
-# nur noch auto audio. bitrate und andere werte justierbar in configdatei
-# confing.ini hinugefügt für die benutzerfreundlichkeit
-# probleme mit der anzahl der audiospuren (wurde durch neues verfahren ersetz)
-#	 man kann nun wählen wie viele audiospuren behandelt werden sollen per eingabe mit einer zahl
-#	 bei falscher eingabe werden menu-abfragen noch mal gestellt anstatt das skript zu beenden
-# neue variablen und deklarierungen für bessere übersicht
-# umbenennung der variablen für bessere übersicht und logik.
-# wenn ff vor der variable steht, werden sie direkt im ffmpeg befehl landen. 
-# optimierung des codes. weniger verzweigungen, zusammenfassung einiger codeblöcke und redundantes entfernt.
-# presets haben nun deutlich mehr funktionen
-#	können schalter aktivieren, variablen und arrays nutzen und rohbefehle vonf fmpeg nutzen
-# einige kommentar-überschriften etwas klarer gestaltet
-#
-
 ### Hier deine Werte für das Transcodieren eingeben.
 	# Videoqualität
 	config_crf="20"
@@ -42,7 +10,8 @@
 	# Audiocodec		(e.g. copy, aac, ac3, eac3, flac)
 	config_audio_codec="eac3"
 
-	# Audiobitrate		(2 Kanal und 6 Kanal)
+	# Audiobitrate		(1, 2 and 6 channel)
+	config_audio_bitrate_mono="112"	
 	config_audio_bitrate_stereo="224"
 	config_audio_bitrate_surround="448"
 
@@ -108,29 +77,31 @@ fi
 echo -e "${CYAN}${BOLD}"
 echo -e "╔══════════════════════════════════════════════════════════════════════════════╗"
 echo -e "║${NORMAL} Wähle Verarbeitungsweg                 ${BOLD}║"
-echo -e "║${NORMAL} Für Animationen Zahl doppelt tippen    ${BOLD}║"
+echo -e "║${NORMAL} Zahl doppelt tippen für Animationen    ${BOLD}║"
 echo -e "╠════════════════════════════════════════╣"
 echo -e "║${NORMAL}${YELLOW} 1) Transkodieren mit Auto-Audio        ${BOLD}${CYAN}║"
-echo -e "║${NORMAL}${YELLOW} 2) Untertitel entfernen                ${BOLD}${CYAN}║"
-echo -e "║${NORMAL}${YELLOW} 3) Vorlagen anwenden                   ${BOLD}${CYAN}║"
+echo -e "║${NORMAL}${YELLOW} 2) Video kopieren mit Auto-Audio       ${BOLD}${CYAN}║"
+echo -e "║${NORMAL}${YELLOW} 3) /                                   ${BOLD}${CYAN}║"
+echo -e "║${NORMAL}${YELLOW} 4) Untertitel entfernen                ${BOLD}${CYAN}║"
+echo -e "║${NORMAL}${YELLOW} 5) Vorlagen anwenden                   ${BOLD}${CYAN}║"
 echo -e "║${NORMAL}${YELLOW} 0)${RED} Beenden  (STRG+C)                   ${BOLD}${CYAN}║"
 echo -e "╚════════════════════════════════════════╝${RESET}"
 echo ""
 while true; do
 	echo -e "${YELLOW}"
-	read -p "Deine Wahl (0/1/2/3/11): " choice
+	read -p "Deine Wahl (0/1/2/3/4/5/11/22): " choice
 	echo -e "${RESET}"
 
-    if [[ "$choice" =~ ^(0|1|2|3|11)$ ]]; then
+    if [[ "$choice" =~ ^(0|1|2|3|4|5|11|22)$ ]]; then
         break	# Gültige Eingabe, Schleife verlassen
     else
-        echo -e "${RED}Ungültige Auswahl! Bitte 0, 1, 2, 3 oder 11 wählen.${RESET}"
+        echo -e "${RED}Ungültige Auswahl! Bitte 0, 1, 11, 2, 22, 3, 4 oder 5 wählen.${RESET}"
         sleep 1	# Schleife wiederholt die Abfrage automatisch
     fi
 done
 
 ### Menu - Audiospuren eingeben
-if [[ "$choice" == "1" || "$choice" == "11" ]]; then
+if [[ "$choice" == "1" || "$choice" == "11" || "$choice" == "2" || "$choice" == "22" ]]; then
     echo -e "${CYAN}${BOLD}"
     echo -e "╔════════════════════════════════════════╗"
     echo -e "║${NORMAL} Wie viele Audiospuren?                 ${BOLD}║"
@@ -165,7 +136,7 @@ if [[ "$choice" == "1" || "$choice" == "11" ]]; then
 fi
 
 ### Vorlagen
-if [[ "$choice" == "3" ]]; then
+if [[ "$choice" == "5" ]]; then
     echo -e "${CYAN}${BOLD}"
     echo -e "╔════════════════════════════════════════╗"
     echo -e "║${NORMAL} Welches Preset möchtest du verwenden?  ${BOLD}║"
@@ -197,9 +168,9 @@ if [[ "$choice" == "3" ]]; then
 			# FFmpeg-Befehl aus Datei laden
 			source "$preset_datei"
 			# eval "ff_preset=\"$ffmpeg_args\""
-# Mehrzeilige Argumente in eine Zeile umwandeln (falls ffmpeg_args mit """ definiert wurde)
-ffmpeg_args=$(echo "$ffmpeg_args" | tr '\n' ' ')
-eval "ff_preset=\"$ffmpeg_args\""
+			# Mehrzeilige Argumente in eine Zeile umwandeln (falls ffmpeg_args mit """ definiert wurde)
+			ffmpeg_args=$(echo "$ffmpeg_args" | tr '\n' ' ')
+			eval "ff_preset=\"$ffmpeg_args\""
 
 
 			echo -e "${YELLOW}FFmpeg-Befehl: ${RESET}$ff_preset"
@@ -261,6 +232,7 @@ do
 	##  Hier werden die Werte der persönlichen Konfiguration geleert um gravierende Fehler zu vermeiden.
 		# config_crf=""
 		# config_audio_codec=""
+		# config_audio_bitrate_mono=""
 		# config_audio_bitrate_stereo=""
 		# config_audio_bitrate_surround=""
 
@@ -319,14 +291,18 @@ do
 	## Function Execution
 		prepare_ff_video_01() {
 				echo ""
-				ff_map_video="-map 0:v -c:v $config_video_codec -crf $config_crf"
-				if [[ "$choice" == "11" ]]; then
+				if [[ "$choice" == "1" || "$choice" == "11" ]]; then
+					ff_map_video="-map 0:v -c:v $config_video_codec -crf $config_crf"
+				elif [[ "$choice" == "2" || "$choice" == "22" ]]; then
+					ff_map_video="-map 0:v -c:v copy"
+				fi
+				if [[ "$choice" == "11" || "$choice" == "22" ]]; then
 					ff_tune_animation="-tune animation"
 				fi
 		}
 
 ### Transkodieren
-	if [[ "$choice" == "1" || "$choice" == "11" ]]; then
+	if [[ "$choice" == "1" || "$choice" == "11" || "$choice" == "2" || "$choice" == "22" ]]; then
 		if [ ${#srt_files[@]} -eq 0 ] && [ ${#ass_files[@]} -eq 0 ]; then										# 0 SRT & 0 ASS
 			echo -e "${YELLOW}Keine Untertiteldateien gefunden.${RESET}"
 			prepare_ff_video_01
@@ -335,8 +311,9 @@ do
 		elif [ ${#srt_files[@]} -eq 1 ] && [ ${#ass_files[@]} -eq 0 ]; then										# 1 SRT & 0 ASS
 			echo -e "${YELLOW}Eine Untertiteldatei (1x SRT) gefunden.${RESET}"
 			prepare_ff_video_01
-			ff_audio_metadata_0="-metadata:s:a:0 language=ger -disposition:a:0 -default"
-			ff_subtitle_metadata_0="-metadata:s:s:0 language=ger -metadata:s:s:0 title=Full -disposition:s:0 default"
+			ff_audio_metadata_0="-metadata:s:a:0 language=ger -disposition:a:0 default"
+			ff_audio_metadata_1="-metadata:s:a:1 language=ja -disposition:a:1 -default"
+			ff_subtitle_metadata_0="-metadata:s:s:0 language=ger -metadata:s:s:0 title=Forced -disposition:s:0 default"
 			ff_map_files="-map 1"
 			ff_map_subtitle_type="-c:s:0 srt"
 			ff_map_input_subtitle=(-i "${srt_files[0]}")
@@ -365,10 +342,21 @@ do
 			prepare_ff_video_01
 			ff_audio_metadata_0="-metadata:s:a:0 language=ger -disposition:a:0 default"
 			ff_audio_metadata_1="-metadata:s:a:1 language=ja -disposition:a:1 -default"
-			ff_audio_metadata_2="-metadata:s:a:2 language=ja -disposition:a:2 -default"
 			ff_subtitle_metadata_0="-metadata:s:s:0 language=ger -metadata:s:s:0 title=Forced -disposition:s:0 default"
 			ff_subtitle_metadata_1="-metadata:s:s:1 language=ger -metadata:s:s:1 title=Full -disposition:s:1 -default"
 			ff_subtitle_metadata_2="-metadata:s:s:2 language=ger -metadata:s:s:2 title=Full -disposition:s:2 -default"
+			ff_map_files="-map 1 -map 2 -map 3"
+			ff_map_subtitle_type="-c:s:0 srt -c:s:1 srt -c:s:2 ass"
+			ff_map_input_subtitle=(-i "${srt_files[0]}" -i "${srt_files[1]}" -i "${ass_files[0]}")
+		elif [ ${#srt_files[@]} -eq 2 ] && [ ${#ass_files[@]} -eq 2 ]; then										# 2 SRT & 2 ASS			# noch mal genauer prüfen/testen
+			echo -e "${YELLOW}Vier Untertiteldateien (2x SRT & 2x ASS) gefunden.${RESET}"
+			prepare_ff_video_01
+			ff_audio_metadata_0="-metadata:s:a:0 language=ger -disposition:a:0 default"
+			ff_audio_metadata_1="-metadata:s:a:1 language=ja -disposition:a:1 -default"
+			ff_subtitle_metadata_0="-metadata:s:s:0 language=ger -metadata:s:s:0 title=Forced -disposition:s:0 default"
+			ff_subtitle_metadata_1="-metadata:s:s:1 language=ger -metadata:s:s:1 title=Full -disposition:s:1 -default"
+			ff_subtitle_metadata_2="-metadata:s:s:2 language=ger -metadata:s:s:2 title=Forced -disposition:s:2 -default"
+			ff_subtitle_metadata_3="-metadata:s:s:3 language=ger -metadata:s:s:2 title=Full -disposition:s:3 -default"
 			ff_map_files="-map 1 -map 2 -map 3"
 			ff_map_subtitle_type="-c:s:0 srt -c:s:1 srt -c:s:2 ass"
 			ff_map_input_subtitle=(-i "${srt_files[0]}" -i "${srt_files[1]}" -i "${ass_files[0]}")
@@ -377,7 +365,7 @@ do
 
 ### Auto-Reihenfolge
 
-	if [[ "$choice" == "1" || "$choice" == "11" ]]; then
+	if [[ "$choice" == "1" || "$choice" == "11" || "$choice" == "2" || "$choice" == "22" ]]; then
 		audio_count=$(ffprobe -v error -select_streams a -show_entries stream=index -of csv=p=0 "$filename" | wc -l)
 		if (( audiochannel > 0 )); then
 			audio_count=${cha_num}
@@ -412,7 +400,26 @@ do
 			# Logik der Audiobitraten- und Audiokanalerkennung
 			ff_map_audio+=" -map 0:a:$i "
 			ff_audio_codec+=("-c:a:$i" "${config_audio_codec}")
-			if [[ "$channels_a" -eq 2 ]]; then
+			
+			# Mono
+			if [[ "$channels_a" -eq 1 ]]; then
+				ff_audio_channel+=("-filter:a:$i" "aformat=channel_layouts=mono")
+				ff_audio_metadata_title+=("-metadata:s:a:$i" "title=Mono")
+				if [[ "$bitrate_a" == "N/A" ]]; then
+					echo -e "${YELLOW}Setze Audiobitrate auf ${config_audio_bitrate_mono}k.${RESET}"
+					echo ""
+					ff_audio_bitrate+=("-b:a:$i" "${config_audio_bitrate_mono}k")				# VBR Mono
+				elif [[ "$bitrate_a_kbps" -le ${config_audio_bitrate_mono} ]]; then				# CBR Mono
+					echo -e "${YELLOW}Setze Audiobitrate auf ${bitrate_a_kbps}k.${RESET}"
+					echo ""
+					ff_audio_bitrate+=("-b:a:$i" "${bitrate_a_kbps}k")
+				else
+					echo -e "${YELLOW}Setze Audiobitrate auf ${config_audio_bitrate_mono}k.${RESET}"
+					echo ""
+					ff_audio_bitrate+=("-b:a:$i" "${config_audio_bitrate_mono}k")				# CBR Mono
+				fi			
+			# Stereo
+			elif [[ "$channels_a" -eq 2 ]]; then
 				ff_audio_channel+=("-filter:a:$i" "aformat=channel_layouts=stereo")
 				ff_audio_metadata_title+=("-metadata:s:a:$i" "title=Stereo")
 				if [[ "$bitrate_a" == "N/A" ]]; then
@@ -428,13 +435,14 @@ do
 					echo ""
 					ff_audio_bitrate+=("-b:a:$i" "${config_audio_bitrate_stereo}k")				# CBR Stereo
 				fi
-			elif [[ "$channels_a" -eq 6 ]]; then
+			# Surround
+			elif [[ "$channels_a" -ge 4 && "$channels_a" -le 8 ]]; then							# 4-8 Kanal
 				ff_audio_channel+=("-filter:a:$i" "aformat=channel_layouts=5.1")
 				ff_audio_metadata_title+=("-metadata:s:a:$i" "title=Surround")
 				if [[ "$bitrate_a" == "N/A" ]]; then
 					echo -e "${YELLOW}Setze Audiobitrate auf ${config_audio_bitrate_surround}k.${RESET}"
 					echo ""
-					ff_audio_bitrate+=("-b:a:$i" "${config_audio_bitrate_surround}k")				# VBR Surround
+					ff_audio_bitrate+=("-b:a:$i" "${config_audio_bitrate_surround}k")			# VBR Surround
 				elif [[ "$bitrate_a_kbps" -le ${config_audio_bitrate_surround} ]]; then			# CBR Surround
 					echo -e "${YELLOW}Setze Audiobitrate auf ${bitrate_a_kbps}k.${RESET}"
 					echo ""
@@ -442,7 +450,7 @@ do
 				else
 					echo -e "${YELLOW}Setze Audiobitrate auf ${config_audio_bitrate_surround}k.${RESET}"
 					echo ""
-					ff_audio_bitrate+=("-b:a:$i" "${config_audio_bitrate_surround}k")				# CBR Surround
+					ff_audio_bitrate+=("-b:a:$i" "${config_audio_bitrate_surround}k")			# CBR Surround
 				fi
 			else
 				echo -e "${RED}Spur $i hat $channels_a Kanäle – nicht unterstützt.${RESET}"
@@ -452,7 +460,7 @@ do
 	fi
 
 ### Untertitel entfernen
-	if [[ "$choice" == "2" ]]; then
+	if [[ "$choice" == "5" ]]; then
 		echo ""
 		echo -e "${YELLOW}Untertitel werden aus ${ORANGE}\"$filename\" ${YELLOW}entfernt.${RESET}"
 		echo ""
@@ -461,10 +469,9 @@ do
 	fi
 
 ### FFmpeg Hauptbefehl
-	ffmpeg -re \
+	ffmpeg \
 	-ss 00:03:00 \
 	-i "$filename" \
-	-vsync passthrough \
 	"${ff_map_input_subtitle[@]}" \
 	-t 00:00:15 \
 	$ff_preset \
@@ -486,6 +493,7 @@ do
 	$ff_subtitle_metadata_1 \
 	$ff_subtitle_metadata_2 \
 	-stats \
+	--add-track-statistics-tags
 	"$new_filename"
 
 
